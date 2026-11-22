@@ -79,6 +79,7 @@ export default function App() {
   const [selectedCity, setSelectedCity] = useState<string>(() => getUserSettings().cityFilterDefault || 'Berlin');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'date-asc' | 'date-desc' | 'newest'>('date-asc');
+  const [visibleLimit, setVisibleLimit] = useState<number>(120);
 
   // Modals state
   const [selectedEventModal, setSelectedEventModal] = useState<ConcertEvent | null>(null);
@@ -265,6 +266,11 @@ export default function App() {
     },
     []
   );
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setVisibleLimit(120);
+  }, [selectedCity, selectedVenue, selectedGenre, selectedSource, dateFilter, customDate, searchQuery, currentView]);
 
   // 7. Source Toggle
   const handleToggleSource = async (id: string, enabled: boolean) => {
@@ -633,34 +639,55 @@ export default function App() {
               </button>
             </div>
           </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredEvents.map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                isFavorite={favorites.includes(event.id)}
-                onToggleFavorite={() => handleToggleFavorite(event.id)}
-                onOpenDetails={() => setSelectedEventModal(event)}
-                onExportIcs={() => exportToIcs(event)}
-                isNewlyDiscovered={recentNewEvents.some(ne => ne.id === event.id)}
-              />
-            ))}
-          </div>
         ) : (
-          <div className="space-y-2">
-            {filteredEvents.map(event => (
-              <EventListItem
-                key={event.id}
-                event={event}
-                isFavorite={favorites.includes(event.id)}
-                onToggleFavorite={() => handleToggleFavorite(event.id)}
-                onOpenDetails={() => setSelectedEventModal(event)}
-                onExportIcs={() => exportToIcs(event)}
-                isNewlyDiscovered={recentNewEvents.some(ne => ne.id === event.id)}
-              />
-            ))}
-          </div>
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredEvents.slice(0, visibleLimit).map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    isFavorite={favorites.includes(event.id)}
+                    onToggleFavorite={() => handleToggleFavorite(event.id)}
+                    onOpenDetails={() => setSelectedEventModal(event)}
+                    onExportIcs={() => exportToIcs(event)}
+                    isNewlyDiscovered={recentNewEvents.some(ne => ne.id === event.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredEvents.slice(0, visibleLimit).map(event => (
+                  <EventListItem
+                    key={event.id}
+                    event={event}
+                    isFavorite={favorites.includes(event.id)}
+                    onToggleFavorite={() => handleToggleFavorite(event.id)}
+                    onOpenDetails={() => setSelectedEventModal(event)}
+                    onExportIcs={() => exportToIcs(event)}
+                    isNewlyDiscovered={recentNewEvents.some(ne => ne.id === event.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {filteredEvents.length > visibleLimit && (
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  onClick={() => setVisibleLimit(prev => prev + 120)}
+                  className="px-6 py-2.5 bg-[#FF9000] hover:bg-[#FFA31A] text-black font-bold text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                >
+                  Weitere Konzerte laden ({Math.min(120, filteredEvents.length - visibleLimit)} von {filteredEvents.length - visibleLimit} übrig)
+                </button>
+                <button
+                  onClick={() => setVisibleLimit(filteredEvents.length)}
+                  className="px-4 py-2.5 bg-[#1b1b1b] hover:bg-[#262626] border border-[#2e2e2e] text-xs font-semibold text-neutral-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  Alle {filteredEvents.length} anzeigen
+                </button>
+              </div>
+            )}
+          </>
         )}
       </main>
 

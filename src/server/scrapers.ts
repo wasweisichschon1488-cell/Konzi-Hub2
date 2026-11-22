@@ -162,16 +162,20 @@ export async function scrapeKnox(): Promise<ConcertEvent[]> {
   const $ = cheerio.load(xml, { xmlMode: true });
 
   const events: ConcertEvent[] = [];
-  const items = $('item').slice(0, 450); // Process up to 450 items to keep processing snappy
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const minDateIso = yesterday.toISOString().split('T')[0];
+
+  const items = $('item'); // Process all upcoming events in feed without artificial cutoff
 
   items.each((_, el) => {
     try {
       const itemTitle = cleanText($(el).find('title').text());
-      const link = cleanText($(el).find('link').text()) || cleanText($(el).find('guid').text());
+      const guid = cleanText($(el).find('guid').text());
+      const link = cleanText($(el).find('link').text()) || guid;
       const descHtml = $(el).find('description').text();
 
       // Extract details from CDATA
-      // Format: <b>Band(s):</b> ... <br /> <b>Datum:</b> 07.11.2026<br /> <b>Ort:</b> ... <br /> <b>Wo:</b> ...
       const getField = (label: string): string => {
         const regex = new RegExp(`<b>${label}:<\\/b>\\s*([\\s\\S]*?)(?:<br\\s*\\/?>|$)`, 'i');
         const match = descHtml.match(regex);
@@ -201,27 +205,27 @@ export async function scrapeKnox(): Promise<ConcertEvent[]> {
         }
       }
 
-      if (!dateIso) return;
+      if (!dateIso || dateIso < minDateIso) return;
 
       const bands = parseBands(bandsRaw);
       const genres = detectGenres(`${bandsRaw} ${sonstigesRaw} ${woRaw}`);
 
       // Extract city from Ort
       let city = ortRaw;
-      const zipMatch = ortRaw.match(/\d{5}\s+([^,]+)/);
+      const zipMatch = ortRaw.match(/\d{4,5}\s+([^,]+)/);
       if (zipMatch) {
         city = zipMatch[1].trim();
       }
 
-      const idMatch = link.match(/id=(\d+)/);
-      const id = idMatch ? `knox-${idMatch[1]}` : `knox-${Math.abs(hashString(bandsRaw + dateIso))}`;
+      const idMatch = guid.match(/id=(\d+)/) || link.match(/id=(\d+)/);
+      const id = idMatch ? `knox-${idMatch[1]}` : `knox-${Math.abs(hashString(bandsRaw + dateIso + woRaw))}`;
 
       events.push({
         id,
         title: bandsRaw,
         bands: bands.length > 0 ? bands : [bandsRaw],
         date: dateIso,
-        time: '20:00', // Knox usually doesn't specify exact hour in RSS
+        time: '20:00',
         venue: woRaw,
         city: city || 'Berlin',
         address: ortRaw,
@@ -229,12 +233,12 @@ export async function scrapeKnox(): Promise<ConcertEvent[]> {
         price: preisRaw || 'Vvk / Ak',
         sourceId: 'knox',
         sourceName: 'Knox Punk/Hardcore DB',
-        sourceUrl: link || 'https://knox.p-u-n-k.de/db/',
+        sourceUrl: link || guid || 'https://knox.p-u-n-k.de/db/',
         description: sonstigesRaw ? `${sonstigesRaw}` : `Punk/Hardcore Konzert in ${woRaw} (${ortRaw})`,
         firstSeenAt: new Date().toISOString(),
         status: 'confirmed',
       });
-    } catch (e) {
+    } catch {
       // ignore individual parse error
     }
   });

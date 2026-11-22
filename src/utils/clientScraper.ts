@@ -149,13 +149,18 @@ async function scrapeKnoxClient(): Promise<ConcertEvent[]> {
   const xmlText = await fetchWithCorsProxy('https://knox.p-u-n-k.de/db/feed.php');
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-  const items = Array.from(xmlDoc.querySelectorAll('item')).slice(0, 300);
+  const items = Array.from(xmlDoc.querySelectorAll('item'));
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const minDateIso = yesterday.toISOString().split('T')[0];
 
   const events: ConcertEvent[] = [];
   for (const item of items) {
     try {
       const title = cleanText(item.querySelector('title')?.textContent);
-      const link = cleanText(item.querySelector('link')?.textContent || item.querySelector('guid')?.textContent);
+      const guid = cleanText(item.querySelector('guid')?.textContent);
+      const link = cleanText(item.querySelector('link')?.textContent) || guid;
       const desc = item.querySelector('description')?.textContent || '';
 
       const getField = (label: string): string => {
@@ -180,16 +185,16 @@ async function scrapeKnoxClient(): Promise<ConcertEvent[]> {
         const match = title.match(/(\d{2})\.(\d{2})\.(\d{4})/);
         if (match) dateIso = `${match[3]}-${match[2]}-${match[1]}`;
       }
-      if (!dateIso) continue;
+      if (!dateIso || dateIso < minDateIso) continue;
 
       const bands = parseBands(bandsRaw);
       const genres = detectGenres(`${bandsRaw} ${sonstigesRaw} ${woRaw}`);
       let city = ortRaw;
-      const zipMatch = ortRaw.match(/\d{5}\s+([^,]+)/);
+      const zipMatch = ortRaw.match(/\d{4,5}\s+([^,]+)/);
       if (zipMatch) city = zipMatch[1].trim();
 
-      const idMatch = link.match(/id=(\d+)/);
-      const id = idMatch ? `knox-${idMatch[1]}` : `knox-${hashString(bandsRaw + dateIso)}`;
+      const idMatch = guid.match(/id=(\d+)/) || link.match(/id=(\d+)/);
+      const id = idMatch ? `knox-${idMatch[1]}` : `knox-${hashString(bandsRaw + dateIso + woRaw)}`;
 
       events.push({
         id,
@@ -204,7 +209,7 @@ async function scrapeKnoxClient(): Promise<ConcertEvent[]> {
         price: preisRaw || 'Vvk / Ak',
         sourceId: 'knox',
         sourceName: 'Knox Punk/Hardcore DB',
-        sourceUrl: link || 'https://knox.p-u-n-k.de/db/',
+        sourceUrl: link || guid || 'https://knox.p-u-n-k.de/db/',
         description: sonstigesRaw || `Punk/Hardcore Konzert in ${woRaw} (${ortRaw})`,
         firstSeenAt: new Date().toISOString(),
         status: 'confirmed',
