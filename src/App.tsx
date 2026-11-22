@@ -510,17 +510,7 @@ export default function App() {
         citiesList={citiesList}
       />
 
-      {/* 2. Scanner Banner & Metric Strip */}
-      <ScannerBanner
-        sources={sources}
-        lastScan={lastScan}
-        isScanning={isScanning}
-        totalEvents={events.length}
-        onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
-        onTriggerScan={handleTriggerScan}
-      />
-
-      {/* 3. Main Content Container */}
+      {/* 2. Main Content Container */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         {/* View Header / Title Banner */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -551,7 +541,7 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Action button in header for specific views */}
+          {/* Action button in header for favorites view */}
           {currentView === 'favorites' && favorites.length > 0 && (
             <button
               onClick={handleExportAllFavorites}
@@ -560,21 +550,6 @@ export default function App() {
               <Download className="w-4 h-4 text-[#FF9000]" />
               <span>Alle Favoriten (.ics) exportieren</span>
             </button>
-          )}
-
-          {(currentView === 'events' || currentView === 'sources') && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-400 font-mono">Sortierung:</span>
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value as 'date-asc' | 'date-desc' | 'newest')}
-                className="text-xs bg-[#151515] border border-[#2e2e2e] rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-[#FF9000] cursor-pointer"
-              >
-                <option value="date-asc">Nächste Termine zuerst</option>
-                <option value="date-desc">Spätere Termine zuerst</option>
-                <option value="newest">Zuletzt entdeckt (Neu!)</option>
-              </select>
-            </div>
           )}
         </div>
 
@@ -727,6 +702,16 @@ export default function App() {
         isOpen={isAiScoutModalOpen}
         onClose={() => setIsAiScoutModalOpen(false)}
         selectedCity={selectedCity}
+      />
+
+      {/* 7. Bottom Collapsible Sources Scanner Banner */}
+      <ScannerBanner
+        sources={sources}
+        lastScan={lastScan}
+        isScanning={isScanning}
+        totalEvents={events.length}
+        onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
+        onTriggerScan={handleTriggerScan}
       />
 
       {/* Footer */}
