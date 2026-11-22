@@ -1,0 +1,6 @@
+{
+  "name": "Konzi-Hub - Punk, Metal & Hardcore Konzert-Kalender",
+  "description": "Zentraler Konzert-Scanner für DIY-Kalender wie Stressfaktor, Ask A Punk, Knox, Metal.de, TixForGigs, Core Tex und M.A.D. Tourbooking mit Städtewahl, Benachrichtigungen und Kalenderexport.",
+  "requestFramePermissions": ["notifications"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
